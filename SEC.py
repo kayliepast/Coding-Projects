@@ -1,5 +1,5 @@
 """
-FINAL PROJECT
+2024 SEC data analyzer
 """
 # import useful tools
 import matplotlib
