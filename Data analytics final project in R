@@ -1,0 +1,104 @@
+In this project, I analyzed the relationship between protein and fiber at the most popular fast food restaurants
+
+# Load the tidyverse package. This helps with working with data and making plots.
+library(tidyverse)
+
+# Load the data
+df <- read_csv("/Users/kay/Desktop/FastFoodNutritionMenuV3.csv")
+
+# Rename columns to make them easier to use.
+df <- df |>
+  rename(
+    Protein = `Protein\n(g)`,
+    Fiber = `Fiber\n(g)`
+  )
+
+# Remove rows where Protein or Fiber is missing or 0, make sure they are numeric
+df <- df |>
+  filter(!is.na(Protein), !is.na(Fiber)) |>
+  filter(Protein > 0 & Fiber > 0) |>
+  mutate(
+    Protein = as.numeric(Protein),
+    Fiber = as.numeric(Fiber)
+  )
+
+# See the companies in the data
+company_names <- unique(df$Company)
+
+# Find top 5 and bottom 5 protein items for each company
+get_top_and_bottom_items <- function(company) {
+  company_data <- df |>
+    filter(Company == company, !is.na(Protein))
+  
+  top5 <- company_data |>
+    arrange(desc(Protein)) |>
+    head(5) |>
+    mutate(type = "Highest")
+  
+  bottom5 <- company_data |>
+    arrange(Protein) |>
+    head(5) |>
+    mutate(type = "Lowest")
+  
+  bind_rows(top5, bottom5)
+}
+
+# Iterate through all the items to get the top and bottom 5 
+all_results <- data.frame()
+
+for (company in company_names) {
+  company_results <- get_top_and_bottom_items(company)
+  all_results <- bind_rows(all_results, company_results)
+}
+
+# Show the top and bottom items
+print(all_results)
+
+# bar chart of average protein for each company
+all_results |>
+  group_by(Company) |>
+  summarise(mean_protein = mean(Protein, na.rm = TRUE)) |>
+  ggplot(aes(x = reorder(Company, mean_protein), y = mean_protein)) +
+  geom_col(fill = "purple") +
+  labs(title = "Average Protein by Company",
+       x = "Company",
+       y = "Protein (g)") +
+  theme_minimal() +
+  coord_flip()
+
+# Bar chart for average fiber in each company
+all_results |>
+  group_by(Company) |>
+  summarise(mean_fiber = mean(Fiber, na.rm = TRUE)) |>
+  ggplot(aes(x = reorder(Company, mean_fiber), y = mean_fiber)) +
+  geom_col(fill = "pink") +
+  labs(title = "Average Fiber by Company",
+       x = "Company",
+       y = "Fiber (g)") +
+  theme_minimal() +
+  coord_flip()
+
+
+# Scatter plots of protein vs fiber for each company
+company_list <- c("McDonald’s", "Burger King", "Wendy’s", "Taco Bell", "KFC", "Pizza Hut")
+
+for (company in company_list) {
+  p <- ggplot(all_results |> filter(Company == company),
+              aes(x = Protein, y = Fiber, color = Item)) +
+    geom_point(size = 3) +
+    labs(title = paste(company, "- Protein vs Fiber"),
+         x = "Protein (g)",
+         y = "Fiber (g)") +
+    theme_minimal()
+  print(p)
+}
+
+# Scatter plot of all items from the full dataset for Protein vs Fiber
+ggplot(df, aes(x = Protein, y = Fiber, color = Company)) +
+  geom_point(alpha = 0.7, size = 3) +
+  labs(title = "Protein vs Fiber Across All Fast Food Menu Items",
+       x = "Protein (g)",
+       y = "Fiber (g)",
+       color = "Company") +
+  theme_minimal()
+
